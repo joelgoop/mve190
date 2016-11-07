@@ -12,3 +12,12 @@ div.highlight pre {
     border: 1px solid #222 !important;
     border-radius: 5px;
 }
+
+.output_area {
+    margin-top: -20px !important; 
+}
+
+.output_subarea, img {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
