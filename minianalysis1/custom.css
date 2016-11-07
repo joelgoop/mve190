@@ -1,0 +1,14 @@
+div.highlight {
+    margin: 20px 0;
+}
+
+ul div.highlight {
+    margin: 5px 0;
+}
+
+div.highlight pre {
+    background-color: #EEE;
+    padding: 20px 20px;
+    border: 1px solid #222 !important;
+    border-radius: 5px;
+}
