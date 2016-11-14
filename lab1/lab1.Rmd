@@ -1,6 +1,6 @@
 ---
-title: "Regression modelling of house prices"
-subtitle: "Report for Lab 1 in  Linear Statistical Models (MVE190)"
+title: "Developing a prediction model for car mileage"
+subtitle: "Report for Lab 1 in Linear Statistical Models (MVE190)"
 author: "Joel Goop"
 date: "November 9, 2016"
 output: 
@@ -18,12 +18,10 @@ toc: false
 library(ggplot2)
 knitr::opts_chunk$set(echo = TRUE)
 
-load('~/git/mve190/lab1/houses_used.RData')
-load('~/courses/mve190/data/house.RData')
-
-myhouse<-as.data.frame(house[iuse,])
-names(myhouse)<-names(house)
-row.names(myhouse)<-seq(1,90)
+load('Lab1data.RData')
+load('itest.RData')
+Auto.Train<-newAuto[-itest,]
+Auto.Test<-newAuto[itest,]
 
 source('~/git/mve190/lab1/funcs.R')
 ```
@@ -58,4 +56,3 @@ multiplot(p1,p3,p2,p4,cols=2)
 ```
 
 # Conclusion
-
