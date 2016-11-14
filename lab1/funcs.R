@@ -4,7 +4,7 @@ tabled.summary <- function(x, na.rm=TRUE){
               Median=median(x, na.rm=na.rm),
               Min=min(x, na.rm=na.rm),
               Max=max(x, na.rm=na.rm), 
-              N=length(x))
+              Missing=sum(is.na(x)))
 }
 
 # Multiple plot function
