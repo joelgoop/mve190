@@ -1,0 +1,61 @@
+---
+title: "Regression modelling of house prices"
+subtitle: "Report for Lab 1 in  Linear Statistical Models (MVE190)"
+author: "Joel Goop"
+date: "November 9, 2016"
+output: 
+  bookdown::pdf_document2:
+    number_sections: true
+    includes:
+      in_header: header.tex
+documentclass: article
+classoption: a4
+geometry: margin=3cm
+toc: false
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+
+load('~/git/mve190/lab1/houses_used.RData')
+load('~/courses/mve190/data/house.RData')
+
+myhouse<-as.data.frame(house[iuse,])
+names(myhouse)<-names(house)
+row.names(myhouse)<-seq(1,90)
+
+source('~/git/mve190/lab1/funcs.R')
+```
+
+# Introduction
+
+The objective of this lab is to model the relationship between the selling price and the floor area of houses based on the `house` dataset. To ascertain the validity of the model, we also investigate the data to ensure that the 5 basic assumptions of 
+
+Table \@ref(tab:datasummary)
+
+```{r datasummary,echo=FALSE}
+summarydf<-sapply(myhouse[,c('Price','SQFT')],tabled.summary)
+knitr::kable(summarydf,
+             caption='Summary statistics for the sampled part of the `house` dataset',
+             digits=0,
+             booktabs=TRUE)
+```
+
+# Methods
+
+The primary method used is ordinary least squares fitting of a simple linear regression model of the form $p \propto a$ where $p$ is the selling price of the house and $a$ is the floor area. The regression is performed in `r` using the `lm()` function. 
+
+# Results
+
+```{r initialscatter,echo=FALSE,fig.cap='Raw data (top left) and data transformed with: `sqrt(y)` (bottom left); `log(y)` (top right);  and `log(x)` and `log(y)` (bottom right).'}
+p1<-ggplot(myhouse, aes(x=SQFT, y=Price))+geom_point(shape=21,fill='white')
+p2<-ggplot(myhouse, aes(x=SQFT, y=sqrt(Price)))+geom_point(shape=21,fill='white')
+p3<-ggplot(myhouse, aes(x=SQFT, y=log(Price)))+geom_point(shape=21,fill='white')
+p4<-ggplot(myhouse, aes(x=log(SQFT), y=log(Price)))+geom_point(shape=21,fill='white')
+
+multiplot(p1,p3,p2,p4,cols=2)
+```
+
+# Conclusion
+
