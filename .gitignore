@@ -1,0 +1,9 @@
+*.log
+*.pdf
+.RData
+.ipynb_checkpoints/
+.Rhistory
+*_files/
+Untitled.*
+*.html
+*.css
