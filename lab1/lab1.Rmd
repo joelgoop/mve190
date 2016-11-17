@@ -33,26 +33,50 @@ The objective of this lab is to model the relationship between the selling price
 Table \@ref(tab:datasummary)
 
 ```{r datasummary,echo=FALSE}
-summarydf<-sapply(myhouse[,c('Price','SQFT')],tabled.summary)
-knitr::kable(summarydf,
-             caption='Summary statistics for the sampled part of the `house` dataset',
+summarydf<-sapply(Auto.Train,tabled.summary)
+knitr::kable(t(summarydf)$Missing,
+             caption='Summary statistics for the sampled part of the `Auto` dataset',
              digits=0,
              booktabs=TRUE)
 ```
 
 # Methods
 
-The primary method used is ordinary least squares fitting of a simple linear regression model of the form $p \propto a$ where $p$ is the selling price of the house and $a$ is the floor area. The regression is performed in `r` using the `lm()` function. 
+The primary method used is ordinary least squares fitting of a linear regression model to predict the mileage of a car based on 6 other properties. A dataset with 376 datapoints   Missing values are imputed using regression models based on related variables in the dataset. 
 
-# Results
+The analysis is implemented in `R` using mainly the standard library, but the `leaps` package is used to simplify model selection.
 
-```{r initialscatter,echo=FALSE,fig.cap='Raw data (top left) and data transformed with: `sqrt(y)` (bottom left); `log(y)` (top right);  and `log(x)` and `log(y)` (bottom right).'}
-p1<-ggplot(myhouse, aes(x=SQFT, y=Price))+geom_point(shape=21,fill='white')
-p2<-ggplot(myhouse, aes(x=SQFT, y=sqrt(Price)))+geom_point(shape=21,fill='white')
-p3<-ggplot(myhouse, aes(x=SQFT, y=log(Price)))+geom_point(shape=21,fill='white')
-p4<-ggplot(myhouse, aes(x=log(SQFT), y=log(Price)))+geom_point(shape=21,fill='white')
+# Results and discussion
 
-multiplot(p1,p3,p2,p4,cols=2)
+
+## Imputation
+
+
+## Variable transformations
+
+```{r initialdatatransform, echo=FALSE}
+trauto <- Auto.Train[complete.cases(Auto.Train),]
+# Transform 1/y
+trauto$mpg <- 1/trauto$mpg
+# Rename to gpm
+names(trauto)[names(trauto)=="mpg"] <- "gpm"
 ```
+
+Pairwise scatter plots of the data revealed several strong connections between the variables and the mileage, but also internally between variables. Based on the shape of the relation between mileage and several other variables an inverse transform was applied, converting mileage (miles per gallon) to fuel consumption (gallons per mile). In  Figure \@ref(fig:initialscatter), the mileage and fuel consumption is plotted against weight. After the transformation the relationship seems sufficiently linear to apply regression.
+
+```{r initialscatter,echo=FALSE,fig.cap='Mileage against weight (left) and inverse mileage (or fuel consumption) against weight (right). After the inverse transformation the relationship seems more or less linear.',fig.height=3.5,fig.width=7}
+
+p1<-(ggplot(trauto, aes(x=weight, y=1/gpm))
+      +geom_point(shape=21,fill='white')
+      +labs(x="Weight",y="Miles per gallon"))
+p2<-(ggplot(trauto, aes(x=weight, y=gpm))
+      +geom_point(shape=21,fill='white')
+      +labs(x="Weight",y="Gallons per mile"))
+
+multiplot(p1,p2,cols=2)
+```
+
+## Model selection 
+
 
 # Conclusion
