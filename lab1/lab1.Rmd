@@ -23,7 +23,7 @@ load('itest.RData')
 Auto.Train<-newAuto[-itest,]
 Auto.Test<-newAuto[itest,]
 
-source('~/git/mve190/lab1/funcs.R')
+source('funcs.R')
 ```
 
 # Introduction
@@ -34,23 +34,36 @@ Table \@ref(tab:datasummary)
 
 ```{r datasummary,echo=FALSE}
 summarydf<-sapply(Auto.Train,tabled.summary)
-knitr::kable(t(summarydf)$Missing,
+knitr::kable(summarydf,
              caption='Summary statistics for the sampled part of the `Auto` dataset',
              digits=0,
              booktabs=TRUE)
+real.rows<-dim(newAuto[!apply(newAuto, 1, function(x) all(is.na(x))),])[1]
+tr.rows<-dim(Auto.Train[!apply(Auto.Train, 1, function(x) all(is.na(x))),])[1]
+te.rows<-dim(Auto.Test[!apply(Auto.Test, 1, function(x) all(is.na(x))),])[1]
 ```
 
-# Methods
+# Methods and data
 
-The primary method used is ordinary least squares fitting of a linear regression model to predict the mileage of a car based on 6 other properties. A dataset with 376 datapoints   Missing values are imputed using regression models based on related variables in the dataset. 
+The primary method used is ordinary least squares fitting of a linear regression model to predict the mileage of a car based on 6 other properties. A dataset with `r real.rows` datapoints (after removing `r dim(newAuto)[1]-real.rows` rows where all values are missing) is split into training and test sets. The training set contains `r tr.rows` data points and the test set contains `r te.rows`.  Missing values are imputed using regression models based on related variables in the dataset. The data is inspected and appropriate variable transformations are applied.
 
-The analysis is implemented in `R` using mainly the standard library, but the `leaps` package is used to simplify model selection.
+The focus of this report is on model selection, which is performed both with an exhaustive search of all possible combination of variables and with backward elimination removing one variable at a time.
+
+The analysis is implemented in `R` using mainly the standard library, combined with the `leaps` package to simplify model selection.
 
 # Results and discussion
 
 
 ## Imputation
 
+If we only consider data points where no values are missing, we have to sacrifice \SI{`r round((1-sum(complete.cases(newAuto))/real.rows),3)*100`}{\percent} of the data. Imputation of the missing values for each variable is done using regression on other variables according to the following:
+
+- `weight` is imputed using regression on `displacement`, `acceleration`, and `horsepower`.
+- `year` is imputed using regression on `weight` and `horsepower`.
+- `displacement`
+- `acceleration`
+- `cylinders`
+- `horsepower`
 
 ## Variable transformations
 
