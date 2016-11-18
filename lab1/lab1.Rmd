@@ -1,22 +1,22 @@
 ---
-title: "Developing a prediction model for car mileage"
+title: "A prediction model for car mileage"
 subtitle: "Report for Lab 1 in Linear Statistical Models (MVE190)"
 author: "Joel Goop"
-date: "November 9, 2016"
+date: \today
 output: 
   bookdown::pdf_document2:
     number_sections: true
     includes:
       in_header: header.tex
 documentclass: article
-classoption: a4
+classoption: a4,12pt
 geometry: margin=3cm
 toc: false
 ---
 
 ```{r setup, include=FALSE}
 library(ggplot2)
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 
 load('Lab1data.RData')
 load('itest.RData')
@@ -28,16 +28,13 @@ source('funcs.R')
 
 # Introduction
 
-The objective of this lab is to model the relationship between the selling price and the floor area of houses based on the `house` dataset. To ascertain the validity of the model, we also investigate the data to ensure that the 5 basic assumptions of 
-
-Table \@ref(tab:datasummary)
 
 ```{r datasummary,echo=FALSE}
 summarydf<-sapply(Auto.Train,tabled.summary)
-knitr::kable(summarydf,
-             caption='Summary statistics for the sampled part of the `Auto` dataset',
-             digits=0,
-             booktabs=TRUE)
+#knitr::kable(summarydf,
+#             caption='Summary statistics for the sampled part of the `Auto` dataset',
+#             digits=0,
+#             booktabs=TRUE)
 real.rows<-dim(newAuto[!apply(newAuto, 1, function(x) all(is.na(x))),])[1]
 tr.rows<-dim(Auto.Train[!apply(Auto.Train, 1, function(x) all(is.na(x))),])[1]
 te.rows<-dim(Auto.Test[!apply(Auto.Test, 1, function(x) all(is.na(x))),])[1]
@@ -53,17 +50,29 @@ The analysis is implemented in `R` using mainly the standard library, combined w
 
 # Results and discussion
 
+An initial inspection of the dataset by pairwise scatter plots shows that many of the variables are strongly correlated. In fact, the variables `weight`, `cylinders`, `displacement`, and `horsepower` all have correlation coefficients with each other in the interval \numrange{0.85}{0.95}. This means that, for predictive purposes, there is little extra information in using more than one of these four variables. Of the four, `weight` correlates most strongly with our dependent variable `mpg`. Another candidate variable for inclusion in the model is `year`, since it is more correlated with `mpg` than with any of the other variables.
+
 
 ## Imputation
 
+```{r imputation,include=FALSE}
+source('imputation.R')
+```
+
+Although collinearity can be a problem in statistical modelling, it has the benefit of making it easier to impute missing values. If there are strong internal relationships between variables, imputation by regression has a good chance of working well.
+
 If we only consider data points where no values are missing, we have to sacrifice \SI{`r round((1-sum(complete.cases(newAuto))/real.rows),3)*100`}{\percent} of the data. Imputation of the missing values for each variable is done using regression on other variables according to the following:
 
-- `weight` is imputed using regression on `displacement`, `acceleration`, and `horsepower`.
-- `year` is imputed using regression on `weight` and `horsepower`.
-- `displacement`
-- `acceleration`
-- `cylinders`
-- `horsepower`
+- `weight` is imputed using regression on `displacement`, `acceleration`, and `horsepower`,
+- `year` is imputed using regression on `weight` and `horsepower`,
+- `displacement` is imputed using regression on `cylinders`, `horsepower`, and `weight`,
+- `acceleration` is imputed using regression on `horsepower` and `weight`,
+- `cylinders` have no missing values (except for empty rows), and
+- `horsepower` is imputed using regression on `weight` and `acceleration`.
+
+Through this process all missing values in the independent variables are filled in the training dataset. The test dataset contains one row where both `weight` and `acceleration` is missing, which means that they cannot be imputed using the above procedure. This row excluded from testing. For all imputation models except the one for `year`, row 266 in the dataset is considered an outlier and removed.
+
+The fitted imputation models have very high $R^2$-values in the range \numrange{0.87}{0.95} for the highly correlated variables `weight`, `displacement`, and `horsepower`, but is lower for `acceleration` (\num{0.55}) and very low for `year` (\num{0.18}). 
 
 ## Variable transformations
 
@@ -90,6 +99,18 @@ multiplot(p1,p2,cols=2)
 ```
 
 ## Model selection 
+
+The first attempt at selecting a model is made using backward elimination. The variables are removed one by one, comparing at each step the models with an $F$-test to determine whether the RSS increased significantly. Starting with the full model, the variables are removed in the order: `displacement`, `acceleration`, `cylinders`, `horsepower`, and `year` (leaving `weight`). According to the $F$-test comparisons, however, only `displacement` should be removed.
+
+```{r mses,echo=FALSE, results="hide", fig.width=5, fig.height=3, fig.cap='Mean square errors for training and prediction against number of variables in model. Solid lines show the values from backward elimination, and circles mark the values from an exhaustive search of variable combinations. The MSE is calculated for `mpg` and not for the inverse which was actually used for fitting. The best prediction performance is found for a model with two variables: `weight` and `year`.'}
+
+source('regsubsets_test.R')
+p
+```
+
+The best performing predictive model is found both with backward selection and with an exhaustive search and it contains two variables: `weight` and `year`. The prediction MSE (transformed back to `mpg`) is \num{5.66}. Without using imputation the best prediction model (which also consists of `weight` and `year`) achieves a prediction MSE of \num{6.13}. Figure \@ref(fig:mses) shows the training and prediction MSEs for all model sizes both for the exhaustive model selection and backward elimination. Strangely, the MSE for prediction is lower than for training (following the lines for backward elimination). I do not have a satisfactory explanation for this, although it could possibly be related to the difference in size between the training and the test datasets. It should be noted that it looks slightly different when looking at the MSEs in the original scale (inverse `mpg`), where prediction error is larger at least for larger model sizes.
+
+Based on the diagnostic plots for the prediction model, row number \num{210} seemed to be a potential outlier, but removing the data point led to a higher prediction error and it was therefore left in the model.
 
 
 # Conclusion

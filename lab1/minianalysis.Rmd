@@ -1,0 +1,65 @@
+---
+subtitle: "Minianalysis 2"
+title: "Predicting car mileage"
+author: "Joel Goop"
+date: \today
+dev: svg
+output:
+  revealjs::revealjs_presentation:
+    theme: serif
+    highlight: pygments
+    transition: slide
+    css: custom.css
+    self_contained: false
+    center: false
+    fig_caption: true
+---
+```{r setup, include=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
+load('Lab1data.RData')
+load('itest.RData')
+Auto.Train<-newAuto[-itest,]
+Auto.Test<-newAuto[itest,]
+
+source('funcs.R')
+
+source('imputation.R')
+```
+
+## Pre-processing and assumptions
+
+- Inverse transform mileage `mpg` $\rightarrow$ `gpm`
+- Imputation using regression (works well for highly correlated variables)
+- Model selection using both exhaustive search and backward elimination
+
+## Mean squared errors
+
+- Lowest prediction MSE is 5.66
+- Without imputation increases to 6.13
+- Prediction errors lower than training?
+- Backward elimination stops to soon!
+
+```{r mses,dev='svg',echo=FALSE, results="hide", fig.width=7, fig.height=4}
+
+source('regsubsets_test.R')
+p
+```
+
+
+## Model
+
+- Best predictive model contains only `weight` and `year`
+- Prediction MSEs of larger models are close
+     - Additional variables do explain more of `mpg`
+     - Not enough to justify increasing $V\left(\hat{\beta}\right)$
+
+```{r model}
+m <- lm(gpm ~ weight+year, data=imp.auto.train)
+```
+
+```{r modelsummary,echo=FALSE}
+s <- summary(m)
+knitr::kable(s$coefficients)
+```
