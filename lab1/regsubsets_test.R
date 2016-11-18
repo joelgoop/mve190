@@ -78,11 +78,3 @@ cleaps$which[sort.list(pmses)[1:10],]
 
 exsel <- data.frame(nvar=tt-1,mse=mses,pmse=pmses)
 
-p <- (ggplot(modsel,aes(x=nvar)) + geom_line(aes(y=mse,colour="mse"),size=1.2) + geom_line(aes(y=pmse,colour="pmse"),size=1.2)
-     + labs(x="Number of variables",y="MSE")
-     + scale_colour_discrete(breaks=c("mse", "pmse"),labels=c("Training", "Prediction"))
-     + geom_point(data=exsel,aes(x=nvar,y=mse,colour="mse"),shape=21,fill="white",size=2.5,stroke=1.2)
-     + geom_point(data=exsel,aes(x=nvar,y=pmse,colour="pmse"),shape=21,fill="white",size=2.5,stroke=1.2)
-     + ylim(0,30)
-     + theme(legend.position = c(1, 1),legend.justification=c(1,1),legend.title=element_blank()))
-

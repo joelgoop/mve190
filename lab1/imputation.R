@@ -55,8 +55,8 @@ m.imp <- lm(gpm ~ weight+year, data=imp.auto.train)
 m.imp.outl <- lm(gpm ~ weight+year, data=imp.auto.train[!rownames(imp.auto.train) %in% c("210"),])
 m.noimp <- lm(gpm ~ weight+year, data=noimp.auto.train[complete.cases(noimp.auto.train),])
 
-p.imp <- predict(m.imp,newdata=imp.auto.test,se.fit=T,interval="predict")
-p.noimp <- predict(m.noimp,newdata=noimp.auto.test,se.fit=T,interval="predict")
+p.imp <- predict(m.imp,newdata=imp.auto.test[complete.cases(imp.auto.test),],se.fit=T,interval="predict")
+p.noimp <- predict(m.noimp,newdata=noimp.auto.test[complete.cases(noimp.auto.test),],se.fit=T,interval="predict")
 
 mm <- lm(gpm ~ .-mpg, data=imp.auto.train)
 
@@ -76,3 +76,8 @@ mm6 <- lm(gpm ~ .-mpg-displacement-acceleration-cylinders-horsepower-year, data=
 anova(mm5,mm6)
 
 summary(mm2)
+
+
+pred <- data.frame(observed=imp.auto.test[complete.cases(imp.auto.test),1],predicted=1/p.imp$fit[,1],up=1/p.imp$fit[,2],lo=1/p.imp$fit[,3])
+       
+

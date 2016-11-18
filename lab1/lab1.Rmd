@@ -9,7 +9,7 @@ output:
     includes:
       in_header: header.tex
 documentclass: article
-classoption: a4,12pt
+classoption: a4,11pt
 geometry: margin=3cm
 toc: false
 ---
@@ -28,6 +28,10 @@ source('funcs.R')
 
 # Introduction
 
+In this report a prediction model for car mileage is developed using linear regression based on other properties of the car. The aim is to perform model selection and find the model that produces the best prediction by splitting the data into a training set used to fit the models and a test set used for the evaluation that forms the basis for the selection. 
+
+Using an exhaustive model selection, the best performing model on the test set is found to be a model using two variables, namely `weight` and `year`. Unsurprisingly, the results show that older and heavier cars have a higher fuel consumption, i.e., a lower mileage. Imputing the missing values using regression based on other variables is also shown to decrease the prediction error. However, on the sampled test set, the best for some larger model sizes perform almost as well, which indicates that it would be good to do cross-validation to assess performance over many sample test datasets. If it were possible to obtain more data points that could probably improve the prediction model.  
+
 
 ```{r datasummary,echo=FALSE}
 summarydf<-sapply(Auto.Train,tabled.summary)
@@ -42,7 +46,9 @@ te.rows<-dim(Auto.Test[!apply(Auto.Test, 1, function(x) all(is.na(x))),])[1]
 
 # Methods and data
 
-The primary method used is ordinary least squares fitting of a linear regression model to predict the mileage of a car based on 6 other properties. A dataset with `r real.rows` datapoints (after removing `r dim(newAuto)[1]-real.rows` rows where all values are missing) is split into training and test sets. The training set contains `r tr.rows` data points and the test set contains `r te.rows`.  Missing values are imputed using regression models based on related variables in the dataset. The data is inspected and appropriate variable transformations are applied.
+The primary method used is ordinary least squares fitting of a linear regression model to predict the mileage of a car based on 6 other properties. A dataset with `r real.rows` datapoints (after removing `r dim(newAuto)[1]-real.rows` rows where all values are missing) is split into training and test sets. The training set contains `r tr.rows` data points and the test set contains `r te.rows`.  The particular rows sampled for the test dataset are given in \@ref(app:testdata).
+
+Missing values are imputed using regression models based on related variables in the dataset. The data is inspected and appropriate variable transformations are applied.
 
 The focus of this report is on model selection, which is performed both with an exhaustive search of all possible combination of variables and with backward elimination removing one variable at a time.
 
@@ -105,12 +111,72 @@ The first attempt at selecting a model is made using backward elimination. The v
 ```{r mses,echo=FALSE, results="hide", fig.width=5, fig.height=3, fig.cap='Mean square errors for training and prediction against number of variables in model. Solid lines show the values from backward elimination, and circles mark the values from an exhaustive search of variable combinations. The MSE is calculated for `mpg` and not for the inverse which was actually used for fitting. The best prediction performance is found for a model with two variables: `weight` and `year`.'}
 
 source('regsubsets_test.R')
+p <- (ggplot(modsel,aes(x=nvar)) + geom_line(aes(y=mse,colour="mse"))  
+      + geom_line(aes(y=pmse,colour="pmse"))
+      + labs(x="Number of variables",y="MSE")
+      + scale_colour_discrete(breaks=c("mse", "pmse"),labels=c("Training", "Prediction"))
+      + geom_point(data=exsel,aes(x=nvar,y=mse,colour="mse"),shape=21,fill="white",size=1.5)
+      + geom_point(data=exsel,aes(x=nvar,y=pmse,colour="pmse"),shape=21,fill="white",size=1.5)
+      + ylim(0,30)
+      + theme(legend.position = c(1, 1),legend.justification=c(1.05,1.05),legend.title=element_blank()))
 p
 ```
 
-The best performing predictive model is found both with backward selection and with an exhaustive search and it contains two variables: `weight` and `year`. The prediction MSE (transformed back to `mpg`) is \num{5.66}. Without using imputation the best prediction model (which also consists of `weight` and `year`) achieves a prediction MSE of \num{6.13}. Figure \@ref(fig:mses) shows the training and prediction MSEs for all model sizes both for the exhaustive model selection and backward elimination. Strangely, the MSE for prediction is lower than for training (following the lines for backward elimination). I do not have a satisfactory explanation for this, although it could possibly be related to the difference in size between the training and the test datasets. It should be noted that it looks slightly different when looking at the MSEs in the original scale (inverse `mpg`), where prediction error is larger at least for larger model sizes.
+The best performing predictive model is found both with backward selection and with an exhaustive search and it contains two variables: `weight` and `year`. The prediction MSE (transformed back to `mpg`) is \num{5.66}. Without using imputation the best prediction model (which also consists of `weight` and `year`) achieves a prediction MSE of \num{6.13}. Figure \@ref(fig:mses) shows the training and prediction MSEs for all model sizes both for the exhaustive model selection and backward elimination. Although the model of size 2 has the lowest prediction error, several larger models are also close, indicating that the selection could be different for a different sample of training and test data.
 
-Based on the diagnostic plots for the prediction model, row number \num{210} seemed to be a potential outlier, but removing the data point led to a higher prediction error and it was therefore left in the model.
+Strangely, the MSE for prediction is lower than for training (following the lines for backward elimination). It should be noted that it looks slightly different when looking at the MSEs in the original scale (inverse `mpg`), where prediction error is larger at least for larger model sizes. However, on average, it should always be larger, and the reason that it is not is either that there is a mistake somewhere in the analysis or that this particular sample of training and test data is not representative. It would be a good idea to perform cross-validation to try other combinations of training and test data and confirm the model selection.
+
+Based on the diagnostic plots for the prediction model, row number \num{210} seemed to be a potential outlier, but removing the data point led to a higher prediction error and it was therefore left in the model. Similarly, the diagnostic $Q$-$Q$ plot was slightly long-tailed which indicated that a compressing transformation could be suitable, but neither `log` nor `sqrt` produced a model with lower prediction error. The diagnostic plots for the selected model are shown in \@ref(app:diagnostics).
+
+## The selected model
+
+```{r modelsummary,echo=FALSE}
+s <- summary(m.imp)
+knitr::kable(s$coefficients, caption='Summary of the selected prediction model. Note that the $p$ values are so small, they are rounded to $\\num{0}$ (all $<\\num{2e-16}$).',
+             booktabs=TRUE,digits=c(6,8,1,0))
+```
+
+The chosen model using the variables `weight` and `year` is presented in Table \@ref(tab:modelsummary) and gives an $R^2$ of \num{`r round(s$r.squared,2)`}. The coefficients indicating relations between fuel consumption and the variables seem to make sense. Fuel consumption increases with weight and decreases with production year, meaning that newer cars consume less fuel. Obviously, other variables also affect the fuel consumption of a car, but the model selection here indicates that the sample size is not large enough to counteract the increase in prediction error from the added estimation variance of using more variables.
+
+```{r predictions,echo=FALSE, results="hide", fig.width=5, fig.height=3, fig.cap='Observed `mpg` plotted against predicted `mpg` with the prediction interval obtained using `predict(..., interval="predict")`. All values except 3 points stay within the prediction interval.'}
+p.predictions <- (ggplot(pred,aes(x=predicted,y=observed,colour="Predictions"))
+                   +geom_line(aes(y=up,colour="Interval"),linetype=2)
+                   +geom_line(aes(y=lo,colour="Interval"),linetype=2)
+                   +geom_point(shape=21,fill="white",size=1.5)
+                   +ylim(10,40)+xlim(10,37)
+                   +labs(x="Predicted MPG",y="Observed MPG")
+                   + guides(color=guide_legend(override.aes=list(shape=c(NA,21),linetype=c(2,0))))
+                   + theme(legend.position = c(0, 1),legend.justification=c(-0.05,1.05),legend.title=element_blank()))
+
+p.predictions
+```
+
+Excluding rows with missing $y$ values and the one row with missing `weight` and `acceleration`, `r dim(pred)[1]` predictions could be made. The observed values for `mpg` are plotted against the predicted values in Figure \@ref(fig:predictions) together with the prediction intervals retrieved from the `predict()` function. All values except 3 points stay within the prediction interval and seem to be reasonable predictions of `mpg`.
+
+Note that the model described here is the model fitted to the training data. After model selection, we could re-fit the model using the whole dataset to possibly improve prediction even further. However, in that case we have no means of evaluating the model's predictive power and it is therefore not included here.
 
 
-# Conclusion
+# Conclusions
+
+The results indicate that the constructed model is a decent prediction model for the mileage of a car based on its weight and year of production. The dataset contained other properties strongly related to primarily the weight which made it possible to impute missing values and thereby improve the prediction error of the model. 
+
+With the sample training and test data here, the best model was simple, containing only 2 out of 6 variables. However, the prediction errors of the best larger models were very close to the chosen one and we can speculate that with a larger sample size we could better estimate a larger number of parameters and make more use of a larger model.
+
+In the model selection process, the prediction errors were smaller than the corresponding training errors which indicates that this particular sample of training/test data enables better-than-average predictions. To make a more robust estimate of the prediction error and to check whether the model selection is good, cross-validation would be a good next step.
+
+\newpage
+\appendix
+\renewcommand{\thesection}{Appendix~\Alph{section}}
+
+# Observations used for the test set {#app:testdata}
+
+```{r testdata,echo=FALSE}
+itest
+```
+
+# Diagnostic plots for the selected model {#app:diagnostics}
+
+```{r diagnostic,echo=FALSE,fig.height=8,fig.width=8}
+par(mfrow=c(2,2))
+plot(m.imp)
+```
