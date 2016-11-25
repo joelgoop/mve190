@@ -1,0 +1,145 @@
+---
+subtitle: "Minianalysis 3"
+title: "Model selection criteria"
+author: "Joel Goop"
+date: \today
+dev: svg
+output:
+  revealjs::revealjs_presentation:
+    theme: serif
+    highlight: pygments
+    transition: slide
+    css: custom.css
+    self_contained: false
+    center: false
+---
+```{r setup, include=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(GGally)
+
+source('SelAndPred.R')
+source('ModelSelection.R')
+source('CVcode.R')
+source('analysis.R')
+source('sweeping.R')
+
+```
+
+## Selection criteria
+
+- Cross validation: measure prediction on test part of data
+- Measure the trade-off between higher $p$ giving more information about $y$ (lower $RSS$), but worse estimation of $\beta$
+    - $AIC = n\log RSS + 2p$
+    - $BIC = n\log RSS + p\log n$
+    - Mallow's $C_p = MSE+\frac{2\sigma}{n}p$
+
+
+## Generate data
+
+Normally distributed $x$s
+```{r datagen,eval=F}
+data[,i] <- rnorm(n)
+```
+
+Some correlated with others
+```{r datagencorr,eval=F}
+data[,i] <- data[,j]+rnorm(length(data[,j]),sd=0.8*sd(data[,j]))
+```
+
+Generate coefficients (1 or 0)
+```{r modelgen,eval=F}
+coeffs <- rep(1,p+1)
+coeffs[sample(seq(2,p+1),floor(p/2))] <- 0 
+
+data %*% coeffs + rnorm(dim(data)[1],mean=0,sd=sd)  
+```
+
+
+
+## Example data
+
+$n=300\quad p=4 \quad \sigma = 1$
+
+```{r exdata,echo=FALSE}
+n <- 300
+p <- 4
+sd <- 1
+
+coeffs <- gen.coeffs(p)
+data <- gen.data(n,p,coeffs,sd)
+```
+
+```{r dataplot,echo=FALSE,fig.height=5,fig.width=6}
+ggpairs(data.frame(data))
+```
+
+## Sample run
+$n=50\quad p=8\quad \sigma=1.2$
+
+```{r sample_run,echo=FALSE}
+n <- 50
+p <- 8
+sd <- 1.2
+
+coeffs <- gen.coeffs(p)
+data <- gen.data(n,p,coeffs,sd)
+
+ti <- sample(seq(dim(data)[1]),floor(dim(data)[1]/2))
+SelAndPred(data,dim(data)[2],trainindex = ti,po=T)
+```
+
+
+
+## Prediction performance
+
+- Average selection and prediction over $100$ generated datasets
+- Different $n$, $p=8$
+- Not consistent between runs, but converges towards $\sigma=1$
+
+```{r averages,echo=FALSE,fig.height=4.5}
+load('nruns_1.RData')
+by_n_sel <- group_by(nruns,n,sel)
+
+mean_pes <- summarize(by_n_sel,mean(err),mean(pe))
+
+p <- ggplot(mean_pes,aes(x=log(n),y=`mean(pe)`,colour=sel))
+p + geom_line(size=1.2) + geom_point(shape=21,size=3,stroke=1.2,fill="white") + labs(y="Mean prediction error")
+```
+
+
+## Selection performance
+
+- Measure deviations from true model (wrong variables selected or right variables not selected)
+- Not consistent between runs, but $BIC$ often performs best
+
+```{r truemodel,echo=FALSE,fig.height=5}
+p <- ggplot(mean_pes,aes(x=log(n),y=`mean(err)`,colour=sel))
+p + geom_line(size=1.2) + geom_point(shape=21,size=3,stroke=1.2,fill="white") + labs(y="Mean deviation from true model")
+```
+
+## Effect of $y$ variance
+
+- Runs with different $\sigma = 1,\,1.5,\,2$
+
+```{r r2effect,echo=FALSE,fig.height=5}
+load('sd15_1.RData')
+load('sd20_1.RData')
+allruns <- rbind(nruns,sd15,sd20)
+
+p <- ggplot(allruns,aes(x=r2,y=log(pe),colour=sel))
+p + geom_point(shape=21,stroke=1.2,fill="white",mapping=aes(size=log(n))) + labs(y="log(Prediction error)",x="R^2")
+```
+
+
+
+## Conclusions
+
+- $BIC$ performed well for selecting true model
+- Very hard to see other patterns
+- Errors in code
+
+
