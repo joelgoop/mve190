@@ -1,0 +1,37 @@
+---
+title: "Predicting residential energy end-use demand"
+subtitle: "Project proposal for Linear Statistical Models (MVE190)"
+author: "Joel Goop"
+date: \today
+link-citations: true
+output: 
+  bookdown::pdf_document2:
+    citation_package: natbib
+    number_sections: true
+    includes:
+      in_header: header.tex
+documentclass: article
+classoption: a4,11pt
+geometry: margin=3cm
+toc: false
+biblio-style: "unsrtnat"
+bibliography: "proposal-refs.bib"
+---
+
+# The Residential Energy Consumption Survey (RECS) data
+
+The dataset is the result of a large survey study performed by the @recs. The data consists of \num{572} columns\footnote{The number of variables, however, is smaller, since some columns contain other information (e.g. id numbers, statistical weights, etc.) and some columns contain the same information in different units.} (excluding imputation flags) for \num{12083} sampled households chosen to represent $>\num{100}$ million american households. In the survey, a wide variety of questions were asked regarding for example properties of the house and appliances, but also related to behaviour of members of the household, as well as energy consumption and expenditures for different purposes. Most questions are categorical even when related to continuous numerical value such as income.
+
+
+# Aim of the project
+
+The goal of the project is to find a good model for prediction of residential end-use demand for energy (possibly limiting it to electricity demand and a specific purpose such as space heating). The main part of the project will be attempting to find applicable methods for model selection. I will start the process with the applying the CART methods for Lab 2 and continue the analysis from there. Missing data has already been imputed in the dataset, but the imputed values have been marked and can easily be removed to explore the effects of the imputation or try different methods for imputing the missing values.
+
+
+
+# Possible difficulties and questions
+
+- How to deal with the large number of variables? Methods that attempt to enumerate combinations will not be feasible.
+- It will be necessary to screen out variables that contain the same information and they are possibly too many for it to be possible by hand.
+- Depending on which method I use, the large number of categorical variables may pose some challenges in terms of dummy variable encoding.
+- How to treat variables that are numerical but not applicable in all cases (e.g. number of rooms in cellar)? 
