@@ -1,0 +1,29 @@
+---
+title: "Comparison between CART and linear regression"
+subtitle: "Report for Lab 2 in Linear Statistical Models (MVE190)"
+author: "Joel Goop"
+date: \today
+link-citations: true
+output: 
+  bookdown::pdf_document2:
+    citation_package: natbib
+    number_sections: true
+    includes:
+      in_header: header.tex
+documentclass: article
+classoption: a4,11pt
+geometry: margin=3cm
+toc: false
+biblio-style: "unsrtnat"
+bibliography: "proposal-refs.bib"
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
+```
+
+# Introduction
+
+In this report, I compare using regression trees and linear models to predict electricity consumption for space heating in U.S. households. The models are based on the Residential Energy Consumptions Survey dataset @recs. The dataset contains responses from \num{12083} households to detailed survey questions regarding their energy consumption and expenditures, as well as their housing situation.

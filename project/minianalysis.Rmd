@@ -1,0 +1,161 @@
+---
+subtitle: "Minianalysis 4"
+title: "Model selection with CART vs linear regression"
+author: "Joel Goop"
+date: \today
+dev: svg
+output:
+  revealjs::revealjs_presentation:
+    theme: serif
+    highlight: pygments
+    transition: slide
+    css: custom.css
+    self_contained: false
+    center: false
+---
+```{r setup, include=FALSE}
+library(ggplot2)
+library(rpart)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
+source('clean_data.R')
+```
+
+# About the data
+
+## The dataset
+
+- Large dataset on energy consumption and housing (Residential Energy Consumption Survey)
+    - `r nrow(recs)` U.S. households
+    - `r ncol(recs.clean)-1` variables
+    - `r sum(factor.cols)` categorical and `r sum(!factor.cols)` numerical
+- Looking to predict `KWHSPH`, electricity consumption for space heating
+
+
+    
+## Tricky aspects of data
+
+- Very large number of variables (though also large sample size)
+    - How to do model selection?
+- Many non-numeric variables
+    - Some are ordered, e.g. income intervals
+    - Some numeric variables also have other options, such as "not applicable" or "don't know"
+    
+## Things that are problematic in `R`
+
+- Some "obscure" variables have values that don't show up in training data, but in testing
+<div style="color:red">
+```
+Error in model.frame.default(Terms, newdata, 
+na.action = na.action, xlev = object$xlevels) : 
+  factor STGRILA has new levels 21
+```
+</div>
+- Factor variables that have only one level represented (can also depend on training/test split)
+<div style="color:red">
+```
+Error in `contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]) : 
+  contrasts can be applied only to factors with 2 or more levels
+```
+</div>
+    
+## Manual data treatment
+
+- Select only those who use electricity for main space heating 
+    - Not necessarily important for CART model
+    - In linear case, otherwise hard to understand $R^2$
+- Manually pick non-factor variables and convert rest to factor
+- Remove columns with only one unique value
+    
+# Results
+
+## Full linear model
+
+```{r loadmodels, include=FALSE}
+load("models.RData")
+```
+
+```{r fitmodel,eval=FALSE}
+full <- lm(KWHSPH ~ ., data=recs.train)
+```
+
+```
+...
+Residual standard error: 1019 on 2789 degrees of freedom
+Multiple R-squared:  0.7699,	Adjusted R-squared:  0.6884 
+F-statistic: 9.438 on 989 and 2789 DF,  p-value: < 2.2e-16
+```
+
+## Forward selection
+
+```{r doforward, eval=FALSE}
+null <- lm(KWHSPH ~ 1, data=recs.train)
+full <- lm(KWHSPH ~ ., data=recs.train)
+
+sm <- step(null, scope=list(lower=null,upper=full),steps=10,direction="forward")
+```
+
+```{r forwardmodel,echo=FALSE}
+formula(sm)
+```
+
+- Selects some important variables
+    - `HDD65`: Heating degree days, i.e. need for heating (climate)
+    - `REPORTABLE_DOMAIN`: Region/state where household is
+    - `TYPEHUQ`: Apartment/house/etc.
+- Starts selecting nonsense variables as well
+    - E.g. `PCSLEEP2`: Whether second most used computer is put to sleep when not used (does not select `PCSLEEP1`)
+
+## Selection is not finished...
+
+- Cannot reach minimum AIC with forward selection (too slow with many variables)
+- Backward selection is too slow
+
+```{r forwardstep,echo=FALSE,fig.height=3,fig.width=6}
+aic <- sm$anova$AIC
+i <- seq(1,length(aic))
+
+d <- data.frame(i=i,aic=as.numeric(aic))
+
+ggplot(data=d,aes(x=i,y=aic)) + geom_line(size=1.2) + geom_point(shape=21,fill="white",stroke=1.2,size=3) + labs(x="Step",y="AIC")
+```
+
+## Tree model
+
+```{r treemodelcode,eval=FALSE}
+tm <- rpart(KWHSPH ~ ., data=recs.train, cp=0.00001,xval=10)
+cps <- data.frame(tm$cptable)
+```
+
+```{r treemodelx,echo=FALSE,fig.height=4}
+d <- data.frame(cp=seq(1,dim(tm$cptable)[1]),xe=tm$cptable[,4])
+
+ggplot(data=d,aes(x=cp,y=xe)) + geom_line(size=1.2) + geom_point(shape=21,fill="white",stroke=1.2,size=3) + labs(x="Split",y="X-error")
+```
+
+## Pruned tree
+
+```{r prunedtree,fig.height=5}
+mincp <- tm$cptable[which.min(tm$cptable[,"xerror"]),"CP"]
+ptm <- prune(tm,cp=mincp)
+rpart.plot::rpart.plot(ptm)
+```
+
+
+## Important variables
+
+```{r importantvars,echo=FALSE}
+impvars <- head(ptm$variable.importance,n=15)
+cat(c(names(impvars),'...'),sep="\n")
+```
+
+- Some are same as for linear model
+- Many forms of climate are included (`HDD65` -- current year, `HDD30YR` -- 30-year average, `CDD` -- same but for cooling)
+- Not as non-sensical variables
+
+
+## Conclusions
+
+- No good way to do model selection for linear model with so many variables
+- Problematic format for many variables
+- Trees can handle full model better (e.g. not manually removing households not using electricity for space heating)
