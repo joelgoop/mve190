@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Joel Goop" />
+  <title>Predicting and understanding electricity consumption for space heating</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="proj_presentation_files/reveal.js-3.3.0/css/reveal.css"/>
+
+
+
+<link rel="stylesheet" href="proj_presentation_files/reveal.js-3.3.0/css/theme/serif.css" id="theme">
+
+
+  <!-- some tweaks to reveal css -->
+  <style type="text/css">
+    .reveal h1 { font-size: 2.0em; }
+    .reveal h2 { font-size: 1.5em;  }
+    .reveal h3 { font-size: 1.25em;	}
+    .reveal h4 { font-size: 1em;	}
+
+    .reveal .slides>section,
+    .reveal .slides>section>section {
+      padding: 0px 0px;
+    }
+
+
+
+    .reveal table {
+      border-width: 1px;
+      border-spacing: 2px;
+      border-style: dotted;
+      border-color: gray;
+      border-collapse: collapse;
+      font-size: 0.7em;
+    }
+
+    .reveal table th {
+      border-width: 1px;
+      padding-left: 10px;
+      padding-right: 25px;
+      font-weight: bold;
+      border-style: dotted;
+      border-color: gray;
+    }
+
+    .reveal table td {
+      border-width: 1px;
+      padding-left: 10px;
+      padding-right: 25px;
+      border-style: dotted;
+      border-color: gray;
+    }
+
+  </style>
+
+    <style type="text/css">code{white-space: pre;}</style>
+
+    <link rel="stylesheet" href="custom.css"/>
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'proj_presentation_files/reveal.js-3.3.0/css/print/pdf.css' : 'proj_presentation_files/reveal.js-3.3.0/css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+    <!--[if lt IE 9]>
+    <script src="proj_presentation_files/reveal.js-3.3.0/lib/js/html5shiv.js"></script>
+    <![endif]-->
+
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+    <h1 class="title">Predicting and understanding electricity consumption for space heating</h1>
+  <h1 class="subtitle">Minianalysis 5</h1>
+    <h2 class="author">Joel Goop</h2>
+</section>
+
+<section id="the-dataset" class="slide level2">
+<h1>The dataset</h1>
+<ul>
+<li>Large dataset on energy consumption and housing (Residential Energy Consumption Survey)
+<ul>
+<li>12083 U.S. households</li>
+<li>429 variables</li>
+<li>351 categorical and 79 numerical</li>
+</ul></li>
+<li>Looking to predict <code>KWHSPH</code>, electricity consumption for space heating</li>
+</ul>
+</section>
+<section id="tricky-aspects-of-data" class="slide level2">
+<h1>Tricky aspects of data</h1>
+<ul>
+<li>Very large number of variables (though also large sample size)
+<ul>
+<li>How to do model selection?</li>
+</ul></li>
+<li>Many non-numeric variables
+<ul>
+<li>Some are ordered, e.g. income intervals</li>
+<li>Some numeric variables also have other options, such as “not applicable” or “don’t know”</li>
+</ul></li>
+<li>Very strong interactions</li>
+</ul>
+</section>
+<section id="interactions-heat-sources" class="slide level2">
+<h1>Interactions: Heat sources</h1>
+<p><img src="proj_presentation_files/figure-revealjs/usage-hdd-1.png" width="768" /></p>
+</section>
+<section id="interactions-climate" class="slide level2">
+<h1>Interactions: Climate</h1>
+<p><img src="proj_presentation_files/figure-revealjs/aia-hdd-1.png" width="768" /></p>
+</section>
+<section id="prediction-with-random-forest" class="slide level2">
+<h1>Prediction with random forest</h1>
+<ul>
+<li>Handles interactions automatically.</li>
+<li><span class="math inline">\(MSE=1.0308434\times 10^{6}\)</span></li>
+</ul>
+<p><img src="proj_presentation_files/figure-revealjs/forest-fig-1.png" width="960" /></p>
+</section>
+<section id="prediction-with-linear-model-manual" class="slide level2">
+<h1>Prediction with linear Model (manual)</h1>
+<ul>
+<li>Interactions must be specified</li>
+<li>Model selection is difficult</li>
+<li><span class="math inline">\(MSE=1.1269545\times 10^{6}\)</span></li>
+</ul>
+<p><img src="proj_presentation_files/figure-revealjs/lin-fig-1.png" width="960" /></p>
+</section>
+<section id="prediction-comparison" class="slide level2">
+<h1>Prediction comparison</h1>
+<p><img src="proj_presentation_files/figure-revealjs/lin-forest-1.png" width="960" /></p>
+</section>
+<section id="interpret-random-forest" class="slide level2">
+<h1>Interpret random forest</h1>
+<ul>
+<li>Check variable importance</li>
+</ul>
+<pre><code>##           FUELHEAT             ELWARM            PELHEAT 
+##         4823978965         2246666996         2205623381 
+##              HDD65            HDD30YR             UGWARM 
+##         1135332490          886034610          793759803 
+##           PGASHEAT              CDD65           PELHOTWA 
+##          773266184          436949616          402523971 
+##            ELWATER            CDD30YR             EQUIPM 
+##          384562231          351804300          332954786 
+##           AIA_Zone            FUELH2O              USENG 
+##          296595945          241887182          225913245 
+##            ELECAUX  REPORTABLE_DOMAIN             EQMAMT 
+##          219343751          166997279          165200427 
+## Climate_Region_Pub           THERMAIN              FOPAY 
+##          156858216          146602279          122924716 
+##            TOTSQFT              USEFO           TOTHSQFT 
+##          117076652          108336218          107928215 
+##            UGWATER            CARRYEL           PGASHTWA 
+##          103729479           93897274           91344131 
+##            TYPEHUQ           WALLTYPE           NUMTHERM 
+##           90083531           88471708           88201125</code></pre>
+</section>
+<section id="interpret-linear-model" class="slide level2">
+<h1>Interpret linear model</h1>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: right;">Estimate</th>
+<th style="text-align: right;">Std. Error</th>
+<th style="text-align: right;">t value</th>
+<th style="text-align: right;">Pr(&gt;|t|)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>(Intercept)</td>
+<td style="text-align: right;">505.5382508</td>
+<td style="text-align: right;">73.1840244</td>
+<td style="text-align: right;">6.9077678</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="even">
+<td>AIA_Zone1:HDD65</td>
+<td style="text-align: right;">0.5554528</td>
+<td style="text-align: right;">0.0355129</td>
+<td style="text-align: right;">15.6408747</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="odd">
+<td>AIA_Zone2:HDD65</td>
+<td style="text-align: right;">0.6415877</td>
+<td style="text-align: right;">0.0348551</td>
+<td style="text-align: right;">18.4072940</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="even">
+<td>AIA_Zone3:HDD65</td>
+<td style="text-align: right;">0.7234073</td>
+<td style="text-align: right;">0.0316055</td>
+<td style="text-align: right;">22.8886797</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="odd">
+<td>AIA_Zone4:HDD65</td>
+<td style="text-align: right;">0.7457911</td>
+<td style="text-align: right;">0.0416457</td>
+<td style="text-align: right;">17.9079908</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="even">
+<td>AIA_Zone5:HDD65</td>
+<td style="text-align: right;">0.9155910</td>
+<td style="text-align: right;">0.0485425</td>
+<td style="text-align: right;">18.8616547</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="odd">
+<td>HDD65:TYPEHUQ2</td>
+<td style="text-align: right;">-0.0534851</td>
+<td style="text-align: right;">0.0270187</td>
+<td style="text-align: right;">-1.9795584</td>
+<td style="text-align: right;">0.0478635</td>
+</tr>
+<tr class="even">
+<td>HDD65:TYPEHUQ3</td>
+<td style="text-align: right;">-0.1868612</td>
+<td style="text-align: right;">0.0322649</td>
+<td style="text-align: right;">-5.7914637</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="odd">
+<td>HDD65:TYPEHUQ4</td>
+<td style="text-align: right;">-0.2292364</td>
+<td style="text-align: right;">0.0314224</td>
+<td style="text-align: right;">-7.2953112</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="even">
+<td>HDD65:TYPEHUQ5</td>
+<td style="text-align: right;">-0.2670132</td>
+<td style="text-align: right;">0.0277451</td>
+<td style="text-align: right;">-9.6238114</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="odd">
+<td>AIA_Zone1:TOTHSQFT</td>
+<td style="text-align: right;">0.3693252</td>
+<td style="text-align: right;">0.0933641</td>
+<td style="text-align: right;">3.9557495</td>
+<td style="text-align: right;">0.0000784</td>
+</tr>
+<tr class="even">
+<td>AIA_Zone2:TOTHSQFT</td>
+<td style="text-align: right;">0.2273901</td>
+<td style="text-align: right;">0.0824752</td>
+<td style="text-align: right;">2.7570724</td>
+<td style="text-align: right;">0.0058748</td>
+</tr>
+<tr class="odd">
+<td>AIA_Zone3:TOTHSQFT</td>
+<td style="text-align: right;">0.1844449</td>
+<td style="text-align: right;">0.0427613</td>
+<td style="text-align: right;">4.3133589</td>
+<td style="text-align: right;">0.0000167</td>
+</tr>
+<tr class="even">
+<td>AIA_Zone4:TOTHSQFT</td>
+<td style="text-align: right;">0.1536965</td>
+<td style="text-align: right;">0.0507686</td>
+<td style="text-align: right;">3.0273935</td>
+<td style="text-align: right;">0.0024921</td>
+</tr>
+<tr class="odd">
+<td>AIA_Zone5:TOTHSQFT</td>
+<td style="text-align: right;">0.0064195</td>
+<td style="text-align: right;">0.0320275</td>
+<td style="text-align: right;">0.2004358</td>
+<td style="text-align: right;">0.8411562</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="conclusions" class="slide level2">
+<h1>Conclusions</h1>
+<ul>
+<li>Prediction performance is similar
+<ul>
+<li>Surprising, since linear model is not optimized</li>
+</ul></li>
+<li>Linear model much easier to interpret</li>
+<li>Random forest simpler to implement</li>
+</ul>
+</section>
+    </div>
+  </div>
+
+  <script src="proj_presentation_files/reveal.js-3.3.0/lib/js/head.min.js"></script>
+  <script src="proj_presentation_files/reveal.js-3.3.0/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Push each slide change to the browser history
+        history: true,
+        // Vertical centering of slides
+        center: false,
+        // Transition style
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+        // Transition style for full page slide backgrounds
+        backgroundTransition: 'default', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+        ]
+      });
+    </script>
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+<script>
+  (function() {
+    if (window.jQuery) {
+      Reveal.addEventListener( 'slidechanged', function(event) {  
+        window.jQuery(event.previousSlide).trigger('hidden');
+        window.jQuery(event.currentSlide).trigger('shown');
+      });
+    }
+  })();
+</script>
+
+
+  </body>
+</html>
