@@ -79,7 +79,7 @@ p <- ggplot(data.frame(pred=prfr,test=y,aia=seldata$AIA_Zone), aes(x=test,y=pred
 p + coord_fixed() + labs(x="Test data",y="Prediction") + geom_abline(slope=1,intercept=0,col="#999999")
 ```
 
-## Prediction with linear Model (manual)
+## Prediction with linear model
 
 ```{r lin-load,include=F}
 load("linmod.RData")
