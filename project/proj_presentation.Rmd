@@ -1,0 +1,131 @@
+---
+subtitle: "Minianalysis 5"
+title: "Predicting and understanding electricity consumption for space heating"
+author: "Joel Goop"
+date: \today
+dev: svg
+output:
+  revealjs::revealjs_presentation:
+    theme: serif
+    highlight: pygments
+    transition: slide
+    css: custom.css
+    self_contained: false
+    center: false
+---
+```{r setup, include=FALSE}
+library(ggplot2)
+library(ranger)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
+source('clean_data.R')
+```
+
+## The dataset
+
+- Large dataset on energy consumption and housing (Residential Energy Consumption Survey)
+    - `r nrow(recs)` U.S. households
+    - `r ncol(recs.clean)-1` variables
+    - `r sum(factor.cols)` categorical and `r sum(!factor.cols)` numerical
+- Looking to predict `KWHSPH`, electricity consumption for space heating
+
+
+    
+## Tricky aspects of data
+
+- Very large number of variables (though also large sample size)
+    - How to do model selection?
+- Many non-numeric variables
+    - Some are ordered, e.g. income intervals
+    - Some numeric variables also have other options, such as "not applicable" or "don't know"
+- Very strong interactions
+
+
+## Interactions: Heat sources
+
+```{r usage-hdd,echo=FALSE}
+seldata <- recs.clean[recs.clean$AIA_Zone==5,]
+p <- ggplot(seldata, aes(x=HDD65,y=KWHSPH,col=FUELHEAT)) + geom_point(aes(shape=ELECAUX))
+p + labs(x="Heating degree days 2009",y="Electricity consumption for space heating")
+
+```
+
+
+## Interactions: Climate
+
+```{r aia-hdd,echo=FALSE}
+seldata <- recs.clean[recs.clean$FUELHEAT==5,]
+p <- ggplot(seldata, aes(x=HDD65,y=KWHSPH,col=AIA_Zone)) + geom_point()
+p + labs(x="Heating degree days 2009",y="Electricity consumption for space heating")
+
+```
+
+## Prediction with random forest
+
+
+```{r forest-load,include=F}
+load("forest.RData")
+seldata <- te[te$FUELHEAT==5 & te$ELECAUX==0,]
+prfr <- predict(rfr, data=seldata, predict.all=F)$predictions
+y = seldata$KWHSPH
+```
+
+- Handles interactions automatically.
+- $MSE=`r mean((prfr-y)^2)`$
+
+
+```{r forest-fig,echo=F,fig.height=5,fig.width=10}
+p <- ggplot(data.frame(pred=prfr,test=y,aia=seldata$AIA_Zone), aes(x=test,y=pred,col=aia)) + geom_point()
+p + coord_fixed() + labs(x="Test data",y="Prediction") + geom_abline(slope=1,intercept=0,col="#999999")
+```
+
+## Prediction with linear Model (manual)
+
+```{r lin-load,include=F}
+load("linmod.RData")
+pm <- predict(mtmp, newdata=seldata)
+```
+
+- Interactions must be specified
+- Model selection is difficult
+- $MSE=`r mean((y-pm)^2)`$
+
+```{r lin-fig,echo=F,fig.height=5,fig.width=10}
+p <- ggplot(data.frame(pred=pm,test=y,aia=seldata$AIA_Zone), aes(x=test,y=pred,col=aia)) + geom_point()
+p + coord_fixed() + labs(x="Test data",y="Prediction") + geom_abline(slope=1,intercept=0,col="#999999")
+```
+
+
+## Prediction comparison
+
+```{r lin-forest,echo=F,fig.width=10}
+preds <- data.frame(test=y,pred=prfr,type="Forest")
+preds <- rbind(preds,data.frame(test=y,pred=pm,type="Linear"))
+
+p <- ggplot(preds, aes(x=test,y=pred,col=type)) + geom_point()
+p + coord_fixed() + labs(x="Test data",y="Prediction") + geom_abline(slope=1,intercept=0,col="#999999")
+
+```
+
+
+## Interpret random forest
+
+- Check variable importance
+
+```{r varimp,echo=F}
+head(-sort(-rfr$variable.importance),n=30)
+```
+
+## Interpret linear model
+
+```{r lin-interp,echo=F}
+knitr::kable(summary(mtmp)$coefficients)
+```
+
+
+## Conclusions
+
+- Prediction performance is similar 
+    - Surprising, since linear model is not optimized
+- Linear model much easier to interpret
+- Random forest simpler to implement
