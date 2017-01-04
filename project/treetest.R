@@ -8,7 +8,7 @@ MSEMatrix<-matrix(0,B,3)
 for (bb in (1:B)) {
   print(bb)
   #
-  iie<-sample(seq(1,dim(recs.clean)[1]),11500)
+  iie<-sample(seq(1,dim(recs.clean)[1]),9000)
   trtree<-recs.clean[-iie,]
   tetree<-recs.clean[iie,]
   tree1<-tree(KWHSPH ~ .,data=trtree,mindev=0.001)

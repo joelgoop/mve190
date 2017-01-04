@@ -1,6 +1,6 @@
 ---
-title: "A comparison between CART and linear regression"
-subtitle: "Report for Lab 2 in Linear Statistical Models (MVE190)"
+title: "Predicting electricity demand for space heating in US households"
+subtitle: "Project report in Linear Statistical Models (MVE190)"
 author: "Joel Goop"
 date: \today
 link-citations: true
@@ -29,104 +29,23 @@ load("lm-used.RData")
 
 # Introduction
 
-In this report, I compare using regression trees and linear models to predict electricity consumption for space heating in U.S. households. The models are based on the Residential Energy Consumptions Survey dataset @recs. The dataset contains responses from \num{12083} households to detailed survey questions regarding their energy consumption and expenditures, as well as their housing situation. The data collected is for the year 2009.
+Roughly one third of the energy consumed in both commercial and residential bildings is used for space heating [@ipcc2014]. It is important to be able to predict this energy demand and to understand the factors that influence it, for example for forecasting changes in the energy demand based on changes in the building stock or policy measures such as building standards. Several different energy sources are used for space heating, but in this report, I focus on electricity. I aim to construct predictive models for electricity consumption for space heating in US households based on the Residential Energy Consumption Survey dataset @recs. 
 
-The analysis shows that it is a challenging task to construct a prediction model based on this dataset. However, the tree models show some promise for predictiton and are better able to capture both small and large `KWHSPH` in a reasonable way. 
+# Description of the data
 
+The selected dataset contains responses from \num{12083} households to detailed survey questions regarding their energy consumption and expenditures, as well as their housing situation. The data collected is for the year 2009.
 
-# Methods and data
-
-In the report, linear regression is compared with regression tree methods. For variable selection for the linear model, forward stepwise selection is primarily applied due to the large number of variables (exacerbated by the fact that most are categorical and require an even larger number of dummy variables) making backward selection difficult (in practice impossible).
-
-The total number of columns in the original dataset is \num{931}, but out of these, \num{361} are id, statistical weight, or imputation flags for other variables, i.e., \num{1} if the value for the variable in question has been imputed for that particular row and \num{0} if not. For this analysis, the imputation flag columns have simply been removed. Another \num{91} columns are directly related to energy consumption or expenditures, excluding our dependent variable, and are also removed. Further, columns with a variance $<0.01$ are dropped, leaving \num{458} variables including the dependent `KWHSPH`. \num{56} numeric (non-categorical) variables are identified manually and the rest are converted using the R function `factor`.
-
-```{r pairplot, echo=FALSE, fig.cap="Pair-plots of some selected variables: `HDD65` -- The heating degree days representing how large the heating demand is at the location of the household; `TOTHSQFT` -- Total heated area; `MONEYPY` -- Household income; and the dependent variable `KWHSPH` -- Electricity consumed for space heating.",fig.height=8,fig.width=8}
-pairs(recs.clean[,c("HDD65","TOTHSQFT","MONEYPY","KWHSPH")])
-```
-
-The dataset is too large to be inspected manually, but to give an example of what the data looks like, Figure \@ref(fig:pairplot) shows pair plots of some selected variables: `HDD65` -- The heating degree days representing how large the heating demand is at the location of the household; `TOTHSQFT` -- Total heated area; `MONEYPY` -- Household income; and the dependent variable `KWHSPH` -- Electricity consumed for space heating. There are no obvious strong connections between the variables, but some observations can be made:
-
-- Households with high consumption of electricity for space heating never live in the warmest places (high `KWHSPH` $\implies$ no low `HDD65` in data)
-- A subtle but similar effect can be seen between `KWHSPH` and `TOTHSQFT`, i.e. the biggest consumers never have really small heated area
-- A seemingly weak collinearity can be observed between `TOTHSQFT` and `MONEYPY`, which is not surprising (more money correlates with larger house area)
+The total number of columns in the original dataset is \num{931}, but out of these, \num{361} are id, statistical weight, or imputation flags for other variables\footnote{Set to \num{1} if the value for the variable in question has been imputed for that particular row and \num{0} if it has not.}. For this analysis, the imputation flag columns have simply been removed and imputed values have been used as if they were valid data points. Another \num{91} columns are directly related to energy consumption or expenditures, excluding our dependent variable, and are also removed, since they could not be expected to be available when actual predictions are to be made. Further, columns with a variance $<0.01$ are dropped, leaving \num{458} variables including the dependent `KWHSPH`. \num{56} numeric (non-categorical) variables are identified manually and the rest are converted using the R function `factor`. Only the households actually using electricity for space heating (identified by the variable `ELWARM` being \num{1}) are selected for the analysis, which decrceases the number of data points to \num{6154}.
 
 
-
-
+# Methods
 
 
 # Results
 
-## Variable selection and stability
 
-To check which variables are selected by the tree model, I run a \num{50} loops, with different training/test data splits, fitting a tree model using the function `tree` with the `mindev` parameter set to \num{1e-3}. In each loop a pruned tree is selected by performing 10-fold cross-validation on $\approx 9000$ of the samples. The remaining \num{3000} samples are used for calculating prediction error (see Section \@ref(pred)). From this computation, the percentage of cases where each variable is selected are shown for the top \num{20} variables in Table \@ref(tab:pctusedtree). 
+# Discussion
 
-```{r pctusedtree, echo=FALSE}
-knitr::kable(head(pctused.desc,n=20), caption='Fraction of cases where each variable is selected for the tree for the 20 most common variables.',
-             booktabs=TRUE,align="rp{6cm}",col.names=c("Fr. used","Description"))
-```
-
-The variables that are always chosen describe some obviously important aspects of the electricity demand for heating, such as to which extent electricity is used for heating (`FUELHEAT`, `ELWARM`), what the climate is like (`HDD65`, possibly `REPORTABLE_DOMAIN`) and affordability aspects (`MONEYPY`, and possibly differences in electricity prices are described by `REPORTABLE_DOMAIN`). The other choices are more difficult to interpret. For example the age of the second household member is almost always chosen, whereas the age of the first houshold member is not among the \num{20} most commonly chosen variables. Surprisingly, some variables that would intuitively seem important for space heating electricity demand, such as the total heated area (`TOTHSQFT`) is not listed in the top \num{20}. In total `r sum(pctused.desc$used>0)` variables are used in at least one of the models and the average number of variables in one model is \num{26.96}. 
-
-For the linear model, the only feasible method (of the ones I know) for variable selection is stepwise forward selection. I am not able to get backward selection to work at all, because it is simply too slow with such a large model\footnote{The rank of the full model is \num{1118}.}. Even with the forward selection method, I have only been able to take a limited number of steps, and the selection process has not reached the minimum AIC. Table \@ref(tab:pctusedlm) shows the fraction of times that variables are chosen over \num{20} runs with \num{15} steps of forward selection.  Some are recognized from the tree case, but some are new such as `ESFRIG` showing if the most-used refrigerator in the household has an energy star. The linear models always use \num{15} variables in each model (since only \num{15} forward steps are taken) and in total selects `r sum(pctused.desc.lm$used>0)` variables for at least one model. The data was split in the same way as for the tree models.
-
-
-```{r pctusedlm, echo=FALSE}
-knitr::kable(head(pctused.desc.lm,n=20), caption='Fraction of cases where each variable is selected for linear model in 10 forward steps.',
-             booktabs=TRUE,align="rp{6cm}",col.names=c("Fr. used","Description"))
-```
-
-
-The linear model seems to be more stable in terms of variable selection over different data splits, as the tree model uses \SI{44}{\percent} of all variables, or approximately \num{7.1} times the average model size, in at least one of the models. The linear model only selects \SI{6}{\percent} of all variables or \num{1.9} times the model size. However, the results may be misleading since "real" model selection (where the model size can also be determined in the procedure) could not be performed due to computational complexity.
-
-## Prediction performance {#pred}
-
-For each of the loops mentioned above a prediction mean square error is calculated as 
-$$
-pMSE = \frac{1}{n_\text{test}} \sum_{i=1}^{n_\text{test}} \left( y_i - \hat{y}_i \right)^2\,\text{.}
-$$
-The tree models get an average $pMSE$ over the \num{50} loops of $\approx \num{607000}$. It should be noted that for the chosen size of training data, no pruning of the tree is done, i.e. the largest tree performs the best. For the linear models, the $pMSE$ is $\approx  \num{683000}$. This seems to indicate that the tree models are better at predicting the electricity consumption for space heating. However, it is important to keep in mind that proper model selection for the linear models could not be performed, which means that it is unlikely that the best-performing linear model could be found. Figure \@ref(fig:aics) shows the decrease of the AIC for one example forward selection process. Although it seems to have started to level out, the minimum AIC has not yet been reached, indicating that more steps should be taken, which could further reduce the prediction error.
-
-```{r aics, echo=FALSE, fig.cap="AIC values for the linear models in a sample stepwise forward selection. The AIC has started to level out but has not reached its minimum value.", fig.height=3,fig.width=5}
-load("models.RData")
-aics <- data.frame(aic=sm$anova$AIC)
-aics$idx <- as.numeric(row.names(aics))
-p <- ggplot(data=aics, aes(x=idx-1,y=aic)) + geom_line(size=0.9) + geom_point(shape=21,size=1.5,fill="white",stroke=1.1)
-p + labs(x="Step",y="AIC") 
-```
-
-To investigate what type of errors are made by the prediction models, I have extracted three sample models: a tree model; a 15-step selected linear model; and the same linear model but with a square root transformation of $y$. The prediction mean squared error for each model is given in Table \@ref(tab:pmses). The tree model performs best, followed by the square root transformed linear model and last the pure linear model. 
-
-```{r pmses, echo=FALSE}
-load("preds.RData")
-pmses <- aggregate((test-pred)^2~type,preds,mean)
-pmses[,2] <- round(pmses[,2],0)
-rownames(pmses) <- pmses[,1]
-pmses <- cbind(pmses[,-1],c("15-step forward selected linear model","Same linear model with square root transformation of y","Tree model"))
-knitr::kable(pmses, caption='Prediction mean squared errorsr pMSE for the three example models.',
-             booktabs=TRUE,align="rp{6cm}",col.names=c("pMSE","Description"))
-```
-
-Looking at the predictions from these three models plotted against actual values in Figure \@ref(fig:preds), none of the methods perform overwhelmingly well. However, the tree model is noticeably better at handling large values of `KWHSPH`, which are consistently underestimated by both linear models. This problem could be caused by some model insufficiency in the linear model, e.g. interactions, that can be more easily handled by the tree model. The tree model also handles small `KWHSPH` better than the regular linear model which is particularly bad at predicting zeros in `KWHSPH`. The square root transformed model also handles low `KWHSPH` fairly well.
-
-```{r preds,echo=FALSE,fig.cap="Actual vs predicted values for `KWHSPH` for the one sampled model of type tree, linear (lm) and linear using a square root transformation of $y$. The gray line marks $y=\\hat{y}$ and the lines of each color are linear fits for each series. Both linear models substantially underpredict high values of `KWHSPH`."}
-p <- ggplot(preds,aes(x=test,y=pred,col=type)) + geom_abline(slope=1, intercept=0, col="#999999") + stat_smooth(method=lm,se=FALSE) + labs(x="Actual KWHSPH",y="Predicted UWHSPH")  + geom_point(shape=21,fill="white")
-p
-```
-
-
-## Performance with small sample size
-
-Testing small sample size with the linear model is slightly tricky, considering the large numer of factor variables. Some more unusual values of some of the factor variables will not be present in the training data if the sample size is small. This means that for samples in the test data with those unseen values cannot be predicted at all. I have chosen to solve this by removing rows that contain unseen values for prediction, but this is somewhat unfair towards the tree model, since it can actually handle those samples as well (how good the prediction is is another matter though). Figure \@ref(fig:lowsampsize) shows the $pMSE$ for the linear and tree models with a training sammple size of \num{583}. The linear model is selected using 5 forward steps for each training data set. In general, the tree model performs a little better, but both models have trouble handling the small sample size with so many variables in the dataset. This may be surprising, since linear models could be expected to be more stable in their performance which might enable them to handle small sample sizes better. However, this dataset does not seem very well suited for linear models, especially considering the large number of categorical variables.
-
-```{r lowsampsize,echo=FALSE, results="hide", fig.cap="Prediction mean squared error for a training sample size of 583 (the rest of the data is used as a test set). The linear model generally performs a little worse, but both vary widely and do not perform very well."}
-load("low-sampsize-mse.RData")
-barplot(t(MSEMatrix[,c(1,3)]),beside=TRUE,col=c("black","grey"))
-legend("bottomright", 
-      legend = c("Tree", "Linear"), 
-      fill = c("black", "grey"), bg="white")
-ylab("pMSE")
-```
 
 # Conclusions
 
@@ -136,4 +55,13 @@ For the continued work with this dataset in the project, there are several ways 
 
 - Attempt to find more specialized methods that are tree-based but better suited to this particular problem.
 - Work with the data to make it more suitable for linear models, e.g. by converting ordered categorical variables to numeric variables.
+
+\appendix
+
+# Source code
+
+## `clean_data.R`
+
+\lstinputlisting{project_code/clean_data.R}
+
 
