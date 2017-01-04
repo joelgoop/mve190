@@ -10,6 +10,7 @@ output:
     number_sections: true
     includes:
       in_header: header.tex
+      after_body: project_code/appendix.tex
 documentclass: article
 classoption: a4,11pt
 geometry: margin=3cm
@@ -22,46 +23,63 @@ bibliography: "proposal-refs.bib"
 library(ggplot2)
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 
-source("clean_data.R")
-load("tree-used.RData")
-load("lm-used.RData")
+source("project_code/clean_data.R")
 ```
 
 # Introduction
 
 Roughly one third of the energy consumed in both commercial and residential bildings is used for space heating [@ipcc2014]. It is important to be able to predict this energy demand and to understand the factors that influence it, for example for forecasting changes in the energy demand based on changes in the building stock or policy measures such as building standards. Several different energy sources are used for space heating, but in this report, I focus on electricity. I aim to construct predictive models for electricity consumption for space heating in US households based on the Residential Energy Consumption Survey dataset @recs. 
 
+The goal is to construct one or several linear regression models, potentially including interaction and polynomial terms, that perform well for prediction with the selected dataset. As a benchmark, I construct a random forest model which can demonstrate the levels of predictive accuracy that are possible with the available data, since the random forest method to some extent can account for interactions as well non-linear responses. I use various model selection techniques to derive a linear model, and compare its performance to that of the random forest. To understand what factors have an important influence on the electricity consumption for space heating, I then analyse and interpret the resulting linear model.
+
 # Description of the data
 
-The selected dataset contains responses from \num{12083} households to detailed survey questions regarding their energy consumption and expenditures, as well as their housing situation. The data collected is for the year 2009.
+The selected dataset contains responses from \num{12083} households to detailed survey questions regarding their energy consumption and expenditures, as well as their housing situation. The data collected is for the year 2009. For the purpose of this analysis, only the households that actually use electricity for space heating (identified by the variable `ELWARM` being \num{1}) are selected, which decrceases the number of data points to \num{6154}. The dependent variable is `KWHSPH`, the amount of electricity consumed for the purpose of space heating during 2009, measured in \si{\kilo\watt h}.
 
-The total number of columns in the original dataset is \num{931}, but out of these, \num{361} are id, statistical weight, or imputation flags for other variables\footnote{Set to \num{1} if the value for the variable in question has been imputed for that particular row and \num{0} if it has not.}. For this analysis, the imputation flag columns have simply been removed and imputed values have been used as if they were valid data points. Another \num{91} columns are directly related to energy consumption or expenditures, excluding our dependent variable, and are also removed, since they could not be expected to be available when actual predictions are to be made. Further, columns with a variance $<0.01$ are dropped, leaving \num{458} variables including the dependent `KWHSPH`. \num{56} numeric (non-categorical) variables are identified manually and the rest are converted using the R function `factor`. Only the households actually using electricity for space heating (identified by the variable `ELWARM` being \num{1}) are selected for the analysis, which decrceases the number of data points to \num{6154}.
+## Number and types of variables
+
+
+```{r numvars, echo=FALSE, include=FALSE}
+nc.rel <- ncol(recs.el)
+nr.rel <- nrow(recs.el)
+
+```
+
+The total number of columns in the original dataset is \num{931}, but out of these, \num{361} are id, statistical weight, or imputation flags for other variables\footnote{Set to \num{1} if the value for the variable in question has been imputed for that particular row and \num{0} if it has not.}. For this analysis, the imputation flag columns have simply been removed and imputed values have been used as if they were valid data points. Another \num{91} columns are directly related to energy consumption or expenditures, excluding our dependent variable, and are also removed, since they could not be expected to be available when actual predictions are to be made. Further, columns with a variance $<0.01$ are dropped, since they do not provide significant information and complicate the analysis. With such columns, data splits can easily end up with a factor variable being constant in the training data or with the test data containing a factor variable value that was never observed in the training data. Both these situations result in errors in `R`. This leaves \num{`r nc.rel`} variables including the dependent `KWHSPH`. \num{`r sum(sapply(recs.el, is.numeric))`} numeric (non-categorical) variables are identified manually and the rest are converted using the R function `factor`. Some ordered categorical variables, such as income, are treated as numeric.
+
+The number of observations is fairly large in comparison with the number of variables ($N/n_{\text{vars}} \approx `r round(nr.rel/(nc.rel-1),0)`$, where $n_{\text{vars}}$ is the number of variables). However, the number of coefficients $p$ that need to be estimated is significantly larger than $n_{\text{vars}}$ when dummy encoding is applied to all categorical variables (each possible value different from the baseline adds one parameter to the model), which may lead to poor coefficient estimates.
+
+## Potentially interesting variables
+
+In order to get a sense of the information available in the dataset, I here describe a few variables divided into categories that could be expected to influence the dependent variable:
+
+- Climate
+    - `HDD65`: The number of heating degree days in 2009 at the location of the household. Heating degree days is used to assess heating needs by summing the difference between the daily average outdoor temperature and a reference temperature for the days when the average temperature is below the reference value [@degreedays]. The `65` in the variable name indicates that the reference temperature used here is \SI{65}{\fahrenheit}, which is standard for the US.
+    - `HDD30YR`: The average heating degree days over a 30 year period.
+    - `AIA_Zone`: In which out of five climate zones the household is located defined by average heating and cooling degree days (measuring difference above the reference temperature instead of below).
+    - Other geographic variables such as `REPORTABLE_DOMAIN` (state or group of states) or `REGIONC` and `DIVISION` indicating census region and division respectively [@census-regdiv].
+- Properties of the house/apartment
+    - `TYPEHUQ`: Type of housing unit (mobile home, single-family attached, single-family detached, apartment in building with \numrange{2}{4} units, or apartment in buildings with \num{5} or more units).
+    - Urban or rural location through the `UR` variable or `METROMICRO` signalling if the household is in a census metro or micro area or neither [@census-metmic].
+    - Heated floor area (`TOTHSQFT`) and number of heated rooms (`HEATROOM`).
+- Economics and living situation
+    - Number of household members (`NHSLDMEM`) and gross housheold income during 2009 (split into categories in the `MONEYPY` variable).
+    - Indoor temperature during winter both when someone is home during the day (`TEMPHOME`) and when noone is home (`TEMPGONE`).
+    
+In addition to the variables mentioned above, there is also information among other things regarding the usage of household appliances, as well as details concerning the householder such as age, education level, and employment status.
+    
 
 
 # Methods
 
+For the benchmark model, I apply the random forest method proposed by @Breiman2001.
 
-# Results
 
+# Results and discussion
 
-# Discussion
 
 
 # Conclusions
 
-The chosen dataset poses some difficult challenges in constructing a prediction model. The large number of categorical variables makes linear model selection hard. Neither tree models nor linear models are able to predict electricity demand for space heating in a very convincing way, but the tree-type models seem tot suit the structure of the data better. The linear model is more stable when it comes to variable selection, but due to the number of variables and the fact that most are categorical, the selection methods attempted do not work very well.
-
-For the continued work with this dataset in the project, there are several ways forward, for example:
-
-- Attempt to find more specialized methods that are tree-based but better suited to this particular problem.
-- Work with the data to make it more suitable for linear models, e.g. by converting ordered categorical variables to numeric variables.
-
-\appendix
-
-# Source code
-
-## `clean_data.R`
-
-\lstinputlisting{project_code/clean_data.R}
 
 

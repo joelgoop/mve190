@@ -23,7 +23,7 @@ recs.clean <- subset(recs.clean,
 
 # Remove columns that have very small variance
 vars <- sapply(recs.clean,var)
-recs.clean <- recs.clean[,which(vars>5e-2)]
+recs.clean <- recs.clean[,which(vars>1e-2)]
 
 # Separate factor and non-factor columns
 nonfactor <- c("HDD65","CDD65","HDD30YR","CDD30YR","YEARMADE","NUMFLRS",
